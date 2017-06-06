@@ -193,7 +193,7 @@ func SyncCheck(common *Common, ce *XmlConfig, cookies []*http.Cookie,
 	jar, _ := cookiejar.New(nil)
 	u, _ := url.Parse(uri)
 	jar.SetCookies(u, cookies)
-	client := &http.Client{Jar: jar}
+	client := &http.Client{Jar: jar, Timeout: time.Duration(5) * time.Second}
 	req, err := http.NewRequest("GET", uri, bytes.NewReader(b))
 	if err != nil {
 		return 0, 0, err
@@ -246,7 +246,7 @@ func WebWxSync(common *Common,
 	jar, _ := cookiejar.New(nil)
 	u, _ := url.Parse(uri)
 	jar.SetCookies(u, cookies)
-	client := &http.Client{Jar: jar}
+	client := &http.Client{Jar: jar, Timeout: time.Duration(3) * time.Second}
 	req, err := http.NewRequest("POST", uri, bytes.NewReader(b))
 	req.Header.Add("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("User-Agent", common.UserAgent)
@@ -391,7 +391,7 @@ func WebWxSendMsg(common *Common, ce *XmlConfig, cookies []*http.Cookie,
 	jar, _ := cookiejar.New(nil)
 	u, _ := url.Parse(uri)
 	jar.SetCookies(u, cookies)
-	client := &http.Client{Jar: jar}
+	client := &http.Client{Jar: jar, Timeout: time.Duration(3) * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -433,7 +433,7 @@ func WebWxUploadMedia(common *Common, ce *XmlConfig, cookies []*http.Cookie,
 	}
 
 	fw, _ = w.CreateFormField("lastModifieDate")
-	_, _ = fw.Write([]byte("Mon Feb 13 2017 17:27:23 GMT+0800 (CST)"))
+	_, _ = fw.Write([]byte(time.Now().Format("Mon Jan 02 2006 15:04:05 GMT-0700 (中国标准时间)")))
 
 	fw, _ = w.CreateFormField("size")
 	_, _ = fw.Write([]byte(strconv.Itoa(len(content))))
@@ -446,6 +446,7 @@ func WebWxUploadMedia(common *Common, ce *XmlConfig, cookies []*http.Cookie,
 	}
 
 	js := InitReqBody{
+		UploadType: 2,
 		BaseRequest: &BaseRequest{
 			ce.Wxuin,
 			ce.Wxsid,

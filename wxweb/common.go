@@ -71,6 +71,7 @@ type Common struct {
 
 // InitReqBody: common http request body struct
 type InitReqBody struct {
+	UploadType         int
 	BaseRequest        *BaseRequest
 	Msg                interface{}
 	SyncKey            *SyncKeyList

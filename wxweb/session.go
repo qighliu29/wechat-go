@@ -52,9 +52,9 @@ var (
 		LoginUrl:   "https://login.weixin.qq.com",
 		Lang:       "zh_CN",
 		DeviceID:   "e" + GetRandomStringFromNum(15),
-		UserAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36",
-		SyncSrv:    "webpush.wx.qq.com",
-		UploadUrl:  "https://file.wx.qq.com/cgi-bin/mmwebwx-bin/webwxuploadmedia?f=json",
+		UserAgent:  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
+		SyncSrv:    "webpush.wx2.qq.com",
+		UploadUrl:  "https://file.wx2.qq.com/cgi-bin/mmwebwx-bin/webwxuploadmedia?f=json",
 		MediaCount: 0,
 	}
 )
@@ -232,7 +232,7 @@ func (s *Session) producer(msg chan []byte, errChan chan error) {
 loop1:
 	for {
 		ret, sel, err := SyncCheck(s.WxWebCommon, s.WxWebXcg, s.Cookies, s.WxWebCommon.SyncSrv, s.SynKeyList)
-		logs.Info(s.WxWebCommon.SyncSrv, ret, sel)
+		// logs.Info(s.WxWebCommon.SyncSrv, ret, sel)
 		if err != nil {
 			logs.Error(err)
 			continue
