@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/mdp/qrterminal"
+	rrconfig "github.com/songtianyi/rrframework/config"
 	"github.com/songtianyi/rrframework/logs"
 )
 
