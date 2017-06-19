@@ -41,6 +41,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"github.com/songtianyi/rrframework/config"
 )
 
 // JsLogin: jslogin api
