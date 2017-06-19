@@ -26,16 +26,15 @@ package wxweb
 
 import (
 	"fmt"
-	"github.com/mdp/qrterminal"
-	"github.com/songtianyi/rrframework/config"
-	"github.com/songtianyi/rrframework/logs"
-	"github.com/songtianyi/rrframework/storage"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/mdp/qrterminal"
+	"github.com/songtianyi/rrframework/logs"
 )
 
 const (
@@ -43,6 +42,15 @@ const (
 	WEB_MODE = iota + 1
 	// MINAL_MODE:  CreateSession will output qrcode in terminal
 	TERMINAL_MODE
+)
+
+const (
+	SESS_INIT = iota + 10001
+	SESS_LOGIN
+	SESS_RUN
+	SESS_EXIT
+	SESS_ERROR
+	SESS_STOP
 )
 
 var (
@@ -67,9 +75,11 @@ type Session struct {
 	SynKeyList      *SyncKeyList
 	Bot             *User
 	Cm              *ContactManager
-	QrcodePath      string //qrcode path
+	QrCodeBytes     []byte //qrcode byte
 	QrcodeUUID      string //uuid
 	HandlerRegister *HandlerRegister
+	EventHandler    func(int, *Session)
+	ExitChan        chan interface{}
 }
 
 // CreateSession: create wechat bot session
@@ -107,11 +117,7 @@ func CreateSession(common *Common, handlerRegister *HandlerRegister, qrmode int)
 		if err != nil {
 			return nil, err
 		}
-		ls := rrstorage.CreateLocalDiskStorage("../public/qrcode/")
-		if err := ls.Save(qrcb, "qrcode.jpg"); err != nil {
-			return nil, err
-		}
-		session.QrcodePath = "/public/qrcode/" + uuid + ".jpg"
+		session.QrCodeBytes = qrcb
 	}
 	return session, nil
 }
@@ -160,6 +166,8 @@ func (s *Session) LoginAndServe(useCache bool) error {
 		err error
 	)
 
+	s.EventHandler(SESS_INIT, s)
+
 	if !useCache {
 		if err := s.scanWaiter(); err != nil {
 			return err
@@ -185,7 +193,7 @@ func (s *Session) LoginAndServe(useCache bool) error {
 		return err
 	}
 	s.Bot, _ = GetUserInfoFromJc(jc)
-	logs.Info(s.Bot)
+	s.EventHandler(SESS_LOGIN, s)
 	ret, err := WebWxStatusNotify(s.WxWebCommon, s.WxWebXcg, s.Bot)
 	if err != nil {
 		return err
@@ -216,13 +224,21 @@ func (s *Session) serve() error {
 	msg := make(chan []byte, 1000)
 	// syncheck
 	errChan := make(chan error)
+	s.EventHandler(SESS_RUN, s)
 	go s.producer(msg, errChan)
 	for {
 		select {
 		case m := <-msg:
 			go s.consumer(m)
+		case <-s.ExitChan:
+			s.EventHandler(SESS_STOP, s)
+			return nil
 		case err := <-errChan:
-			// all received messages have been consumed
+			if err != nil {
+				s.EventHandler(SESS_ERROR, s)
+			} else {
+				s.EventHandler(SESS_EXIT, s)
+			}
 			return err
 		}
 	}
@@ -306,7 +322,7 @@ func (s *Session) analize(msg map[string]interface{}) *ReceivedMessage {
 			rmsg.Who = s.Bot.UserName
 			rmsg.Content = rmsg.OriginContent
 		}
-	}else{
+	} else {
 		// no group message
 		rmsg.Who = rmsg.FromUserName
 		rmsg.Content = rmsg.OriginContent

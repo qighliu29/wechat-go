@@ -30,7 +30,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/songtianyi/rrframework/config"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -433,7 +432,7 @@ func WebWxUploadMedia(common *Common, ce *XmlConfig, cookies []*http.Cookie,
 	}
 
 	fw, _ = w.CreateFormField("lastModifieDate")
-	_, _ = fw.Write([]byte(time.Now().Format("Mon Jan 02 2006 15:04:05 GMT-0700 (中国标准时间)")))
+	_, _ = fw.Write([]byte(time.Now().Format("Mon Jan 02 2006 15:04:05 GMT-0700 (涓浗鏍囧噯鏃堕棿)")))
 
 	fw, _ = w.CreateFormField("size")
 	_, _ = fw.Write([]byte(strconv.Itoa(len(content))))
