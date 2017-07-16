@@ -1,0 +1,7 @@
+package: github.com/qighliu29/wechat-go
+import:
+- package: github.com/mdp/qrterminal
+- package: github.com/songtianyi/rrframework
+  subpackages:
+  - config
+  - logs

@@ -51,7 +51,6 @@ const (
 	SESS_RUN
 	SESS_EXIT
 	SESS_ERROR
-	SESS_STOP
 )
 
 var (
@@ -80,7 +79,7 @@ type Session struct {
 	QrcodeUUID      string //uuid
 	HandlerRegister *HandlerRegister
 	EventHandler    func(int, *Session)
-	ExitChan        chan interface{}
+	Sid             interface{}
 }
 
 // CreateSession: create wechat bot session
@@ -231,9 +230,6 @@ func (s *Session) serve() error {
 		select {
 		case m := <-msg:
 			go s.consumer(m)
-		case <-s.ExitChan:
-			s.EventHandler(SESS_STOP, s)
-			return nil
 		case err := <-errChan:
 			if err != nil {
 				s.EventHandler(SESS_ERROR, s)
