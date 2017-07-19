@@ -78,8 +78,7 @@ type Session struct {
 	QrCodeBytes     []byte //qrcode byte
 	QrcodeUUID      string //uuid
 	HandlerRegister *HandlerRegister
-	EventHandler    func(int, *Session)
-	Sid             interface{}
+	Status          int
 }
 
 // CreateSession: create wechat bot session
@@ -166,7 +165,7 @@ func (s *Session) LoginAndServe(useCache bool) error {
 		err error
 	)
 
-	s.EventHandler(SESS_INIT, s)
+	s.Status = SESS_INIT
 
 	if !useCache {
 		if err := s.scanWaiter(); err != nil {
@@ -193,7 +192,6 @@ func (s *Session) LoginAndServe(useCache bool) error {
 		return err
 	}
 	s.Bot, _ = GetUserInfoFromJc(jc)
-	s.EventHandler(SESS_LOGIN, s)
 	ret, err := WebWxStatusNotify(s.WxWebCommon, s.WxWebXcg, s.Bot)
 	if err != nil {
 		return err
@@ -201,6 +199,8 @@ func (s *Session) LoginAndServe(useCache bool) error {
 	if ret != 0 {
 		return fmt.Errorf("WebWxStatusNotify fail, %d", ret)
 	}
+
+	s.Status = SESS_LOGIN
 
 	cb, err := WebWxGetContact(s.WxWebCommon, s.WxWebXcg, s.Cookies)
 	if err != nil {
@@ -224,7 +224,7 @@ func (s *Session) serve() error {
 	msg := make(chan []byte, 1000)
 	// syncheck
 	errChan := make(chan error)
-	s.EventHandler(SESS_RUN, s)
+	s.Status = SESS_RUN
 	go s.producer(msg, errChan)
 	for {
 		select {
@@ -232,9 +232,9 @@ func (s *Session) serve() error {
 			go s.consumer(m)
 		case err := <-errChan:
 			if err != nil {
-				s.EventHandler(SESS_ERROR, s)
+				s.Status = SESS_ERROR
 			} else {
-				s.EventHandler(SESS_EXIT, s)
+				s.Status = SESS_EXIT
 			}
 			return err
 		}
