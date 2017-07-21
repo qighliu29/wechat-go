@@ -31,10 +31,11 @@ import (
 )
 
 // Handler: message function wrapper
-type Handler func(*Session, *ReceivedMessage)
+type Handler func(interface{}, *Session, *ReceivedMessage)
 
 // HandlerWrapper: message handler wrapper
 type HandlerWrapper struct {
+	obj     interface{}
 	handle  Handler
 	enabled bool
 	name    string
@@ -43,7 +44,7 @@ type HandlerWrapper struct {
 // Run: message handler callback
 func (s *HandlerWrapper) Run(session *Session, msg *ReceivedMessage) {
 	if s.enabled {
-		s.handle(session, msg)
+		s.handle(s.obj, session, msg)
 	}
 }
 
@@ -75,7 +76,7 @@ func CreateHandlerRegister() *HandlerRegister {
 }
 
 // Add: add message callback handle to handler register
-func (hr *HandlerRegister) Add(key int, h Handler, name string) error {
+func (hr *HandlerRegister) Add(i interface{}, key int, h Handler, name string) error {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
 	for _, v := range hr.hmap {
@@ -85,7 +86,7 @@ func (hr *HandlerRegister) Add(key int, h Handler, name string) error {
 			}
 		}
 	}
-	hr.hmap[key] = append(hr.hmap[key], &HandlerWrapper{handle: h, enabled: false, name: name})
+	hr.hmap[key] = append(hr.hmap[key], &HandlerWrapper{obj: i, handle: h, enabled: false, name: name})
 	return nil
 }
 
