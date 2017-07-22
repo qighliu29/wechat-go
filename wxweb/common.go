@@ -69,6 +69,12 @@ type Common struct {
 	RedirectUri string
 }
 
+type UrlGroup struct {
+	IndexUrl  string
+	UploadUrl string
+	SyncUrl   string
+}
+
 // InitReqBody: common http request body struct
 type InitReqBody struct {
 	UploadType         int
@@ -231,16 +237,16 @@ type BaseResponse struct {
 	ErrMsg string
 }
 
-// ContactResponse: get contact response struct
-type ContactResponse struct {
+// WxWebGetContactResponse: get contact response struct
+type WxWebGetContactResponse struct {
 	BaseResponse *BaseResponse
 	MemberCount  int
 	MemberList   []*User
 	Seq          int
 }
 
-// GroupContactResponse: get batch contact response struct
-type GroupContactResponse struct {
+// WxWebBatchGetContactResponse: batch get contact response struct
+type WxWebBatchGetContactResponse struct {
 	BaseResponse *BaseResponse
 	Count        int
 	ContactList  []*User
@@ -250,6 +256,14 @@ type GroupContactResponse struct {
 type VerifyUser struct {
 	Value            string
 	VerifyUserTicket string
+}
+
+type RecommendInfo struct {
+	Ticket   string
+	UserName string
+	NickName string
+	Content  string
+	Sex      int
 }
 
 // ReceivedMessage: for received message
@@ -263,4 +277,5 @@ type ReceivedMessage struct {
 	MsgType       int
 	OriginContent string
 	At            string
+	RecommendInfo *RecommendInfo
 }

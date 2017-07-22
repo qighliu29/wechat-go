@@ -65,6 +65,13 @@ var (
 		UploadUrl:  "https://file.wx2.qq.com/cgi-bin/mmwebwx-bin/webwxuploadmedia?f=json",
 		MediaCount: 0,
 	}
+	URLPool = []UrlGroup{
+		{"wx2.qq.com", "file.wx2.qq.com", "webpush.wx2.qq.com"},
+		{"wx8.qq.com", "file.wx8.qq.com", "webpush.wx8.qq.com"},
+		{"qq.com", "file.wx.qq.com", "webpush.wx.qq.com"},
+		{"web2.wechat.com", "file.web2.wechat.com", "webpush.web2.wechat.com"},
+		{"wechat.com", "file.web.wechat.com", "webpush.web.wechat.com"},
+	}
 )
 
 // Session: wechat bot session
@@ -79,6 +86,7 @@ type Session struct {
 	QrcodeUUID      string //uuid
 	HandlerRegister *HandlerRegister
 	Status          int
+	CreateTime      int64
 }
 
 // CreateSession: create wechat bot session
@@ -101,6 +109,7 @@ func CreateSession(common *Common, handlerRegister *HandlerRegister, qrmode int)
 		WxWebCommon: common,
 		WxWebXcg:    wxWebXcg,
 		QrcodeUUID:  uuid,
+		CreateTime:  time.Now().Unix(),
 	}
 
 	if handlerRegister != nil {
@@ -128,12 +137,12 @@ func (s *Session) analizeVersion(uri string) {
 	s.WxWebCommon.CgiDomain = u.Scheme + "://" + u.Host
 	s.WxWebCommon.CgiUrl = s.WxWebCommon.CgiDomain + "/cgi-bin/mmwebwx-bin"
 
-	if strings.Contains(u.Host, "wx2") {
-		// new version
-		s.WxWebCommon.SyncSrv = "webpush.wx2.qq.com"
-	} else {
-		// old version
-		s.WxWebCommon.SyncSrv = "webpush.wx.qq.com"
+	for _, urlGroup := range URLPool {
+		if strings.Contains(u.Host, urlGroup.IndexUrl) {
+			s.WxWebCommon.SyncSrv = urlGroup.SyncUrl
+			s.WxWebCommon.UploadUrl = fmt.Sprintf("https://%s/cgi-bin/mmwebwx-bin/webwxuploadmedia?f=json", urlGroup.UploadUrl)
+			return
+		}
 	}
 }
 
@@ -144,7 +153,7 @@ loop1:
 		case <-time.After(3 * time.Second):
 			redirectUri, err := Login(s.WxWebCommon, s.QrcodeUUID, "0")
 			if err != nil {
-				logs.Error(err)
+				logs.Warn(err)
 				if strings.Contains(err.Error(), "window.code=408") {
 					return err
 				}
@@ -168,10 +177,14 @@ func (s *Session) LoginAndServe(useCache bool) error {
 	s.Status = SESS_INIT
 
 	if !useCache {
+		if s.Cookies != nil {
+			// confirmWaiter
+		}
 		if err := s.scanWaiter(); err != nil {
 			return err
 		}
 
+		// update cookies
 		if s.Cookies, err = WebNewLoginPage(s.WxWebCommon, s.WxWebXcg, s.WxWebCommon.RedirectUri); err != nil {
 			return err
 		}
@@ -212,7 +225,8 @@ func (s *Session) LoginAndServe(useCache bool) error {
 		return err
 	}
 
-	s.Cm.AddContactFromUser(s.Bot)
+	// for v2
+	s.Cm.AddUser(s.Bot)
 
 	if err := s.serve(); err != nil {
 		return err
@@ -231,6 +245,7 @@ func (s *Session) serve() error {
 		case m := <-msg:
 			go s.consumer(m)
 		case err := <-errChan:
+			// TODO maybe not all consumed messages have not return yet
 			if err != nil {
 				s.Status = SESS_ERROR
 			} else {
@@ -281,7 +296,7 @@ func (s *Session) consumer(msg []byte) {
 	jc, _ := rrconfig.LoadJsonConfigFromBytes(msg)
 	msgCount, _ := jc.GetInt("AddMsgCount")
 	if msgCount < 1 {
-		// no msg
+		// no msg details
 		return
 	}
 	msgis, _ := jc.GetInterfaceSlice("AddMsgList")
@@ -289,7 +304,7 @@ func (s *Session) consumer(msg []byte) {
 		rmsg := s.analize(v.(map[string]interface{}))
 		err, handles := s.HandlerRegister.Get(rmsg.MsgType)
 		if err != nil {
-			logs.Error(err)
+			logs.Warn(err)
 			continue
 		}
 		for _, v := range handles {
@@ -307,6 +322,18 @@ func (s *Session) analize(msg map[string]interface{}) *ReceivedMessage {
 		MsgType:       int(msg["MsgType"].(float64)),
 	}
 
+	// friend verify message
+	if rmsg.MsgType == MSG_FV {
+		riif := msg["RecommendInfo"].(map[string]interface{})
+		rmsg.RecommendInfo = &RecommendInfo{
+			Ticket:   riif["Ticket"].(string),
+			UserName: riif["UserName"].(string),
+			NickName: riif["NickName"].(string),
+			Content:  riif["Content"].(string),
+			Sex:      int(riif["Sex"].(float64)),
+		}
+	}
+
 	if strings.Contains(rmsg.FromUserName, "@@") ||
 		strings.Contains(rmsg.ToUserName, "@@") {
 		rmsg.IsGroup = true
@@ -320,7 +347,7 @@ func (s *Session) analize(msg map[string]interface{}) *ReceivedMessage {
 			rmsg.Content = rmsg.OriginContent
 		}
 	} else {
-		// no group message
+		// none group message
 		rmsg.Who = rmsg.FromUserName
 		rmsg.Content = rmsg.OriginContent
 	}
@@ -337,6 +364,7 @@ func (s *Session) analize(msg map[string]interface{}) *ReceivedMessage {
 	return rmsg
 }
 
+// message funcs
 // SendText: send text msg type 1
 func (s *Session) SendText(msg, from, to string) (string, string, error) {
 	b, err := WebWxSendMsg(s.WxWebCommon, s.WxWebXcg, s.Cookies, from, to, msg)
@@ -435,8 +463,27 @@ func (s *Session) RevokeMsg(clientMsgId, svrMsgId, toUserName string) {
 	}
 }
 
+// user funcs
 // Logout: logout web wechat
-
 func (s *Session) Logout() error {
 	return WebWxLogout(s.WxWebCommon, s.WxWebXcg, s.Cookies)
+}
+
+func (s *Session) AcceptFriend(verifyContent string, vul []*VerifyUser) error {
+	b, err := WebWxVerifyUser(s.WxWebCommon, s.WxWebXcg, s.Cookies, 3, verifyContent, vul)
+	if err != nil {
+		return err
+	}
+	jc, err := rrconfig.LoadJsonConfigFromBytes(b)
+	if err != nil {
+		return err
+	}
+	retcode, err := jc.GetInt("BaseResponse.Ret")
+	if err != nil {
+		return err
+	}
+	if retcode != 0 {
+		return fmt.Errorf("BaseResponse.Ret %d", retcode)
+	}
+	return nil
 }
