@@ -262,7 +262,10 @@ loop1:
 		ret, sel, err := SyncCheck(s.WxWebCommon, s.WxWebXcg, s.Cookies, s.WxWebCommon.SyncSrv, s.SynKeyList)
 		// logs.Info(s.WxWebCommon.SyncSrv, ret, sel)
 		if err != nil {
-			logs.Error(err)
+			if strings.Contains(err.Error(), "Client.Timeout") {
+			} else {
+				logs.Error(err)
+			}
 			continue
 		}
 		if ret == 0 {
