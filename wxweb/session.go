@@ -240,6 +240,7 @@ func (s *Session) serve() error {
 	errChan := make(chan error)
 	s.Status = SESS_RUN
 	go s.producer(msg, errChan)
+	go s.updateCm()
 	for {
 		select {
 		case m := <-msg:
@@ -270,7 +271,7 @@ loop1:
 		}
 		if ret == 0 {
 			// check success
-			if sel == 2 {
+			if sel == 2 || sel == 6 {
 				// new message
 				err := WebWxSync(s.WxWebCommon, s.WxWebXcg, s.Cookies, msg, s.SynKeyList)
 				if err != nil {
@@ -489,4 +490,19 @@ func (s *Session) AcceptFriend(verifyContent string, vul []*VerifyUser) error {
 		return fmt.Errorf("BaseResponse.Ret %d", retcode)
 	}
 	return nil
+}
+
+func (s *Session) updateCm() {
+	for {
+		<-time.Tick(time.Duration(5) * time.Second)
+		if s.Status == SESS_ERROR || s.Status == SESS_EXIT {
+			break
+		}
+		cb, err := WebWxGetContact(s.WxWebCommon, s.WxWebXcg, s.Cookies)
+		if err == nil {
+			s.Cm, err = CreateContactManagerFromBytes(cb)
+			// for v2
+			s.Cm.AddUser(s.Bot)
+		}
+	}
 }

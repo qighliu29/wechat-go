@@ -45,6 +45,14 @@ import (
 	rrconfig "github.com/songtianyi/rrframework/config"
 )
 
+// var (
+// 	proxy, _ = url.Parse("http://127.0.0.1:8888")
+// 	tr       = &http.Transport{
+// 		Proxy:           http.ProxyURL(proxy),
+// 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+// 	}
+// )
+
 // JsLogin: jslogin api
 func JsLogin(common *Common) (string, error) {
 	km := url.Values{}
@@ -195,6 +203,7 @@ func SyncCheck(common *Common, ce *XmlConfig, cookies []*http.Cookie,
 	u, _ := url.Parse(uri)
 	jar.SetCookies(u, cookies)
 	client := &http.Client{Jar: jar, Timeout: time.Duration(5) * time.Second}
+	// client := &http.Client{Transport: tr, Jar: jar, Timeout: time.Duration(5) * time.Second}
 	req, err := http.NewRequest("GET", uri, bytes.NewReader(b))
 	if err != nil {
 		return 0, 0, err
@@ -248,6 +257,7 @@ func WebWxSync(common *Common,
 	u, _ := url.Parse(uri)
 	jar.SetCookies(u, cookies)
 	client := &http.Client{Jar: jar, Timeout: time.Duration(3) * time.Second}
+	// client := &http.Client{Transport: tr, Jar: jar, Timeout: time.Duration(3) * time.Second}
 	req, err := http.NewRequest("POST", uri, bytes.NewReader(b))
 	req.Header.Add("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("User-Agent", common.UserAgent)

@@ -48,6 +48,15 @@ func (s *HandlerWrapper) Run(session *Session, msg *ReceivedMessage) {
 	}
 }
 
+// Print: show handler details
+func (s *HandlerWrapper) Print() {
+	if s.enabled {
+		fmt.Printf("name: %s(enable)", s.name)
+	} else {
+		fmt.Printf("name: %s(disable)", s.name)
+	}
+}
+
 func (s *HandlerWrapper) getName() string {
 	return s.name
 }
