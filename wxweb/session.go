@@ -525,10 +525,10 @@ func (s *Session) SetRemarkName(uname, rname string) error {
 	return nil
 }
 
-func (s *Session) GetNickByUsername(uname string) (string, error) {
+func (s *Session) GetRemarkByUsername(uname string) (string, error) {
 	usr := s.Cm.GetContactByUserName(uname)
 	if usr == nil {
 		return "", fmt.Errorf("No such user")
 	}
-	return usr.NickName, nil
+	return usr.RemarkName, nil
 }
