@@ -904,3 +904,45 @@ func WebWxLogout(common *Common, ce *XmlConfig, cookies []*http.Cookie) error {
 	}
 	return nil
 }
+
+// WebWxOplog ...
+func WebWxOplog(common *Common, ce *XmlConfig, uname, rname string, cmd int) (int, error) {
+	km := url.Values{}
+	km.Add("pass_ticket", ce.PassTicket)
+	km.Add("lang", common.Lang)
+	uri := common.CgiUrl + "/webwxoplog?" + km.Encode()
+
+	js := OplogReqBody{
+		BaseRequest: &BaseRequest{
+			ce.Wxuin,
+			ce.Wxsid,
+			ce.Skey,
+			common.DeviceID,
+		},
+		UserName:   uname,
+		CmdId:      cmd,
+		RemarkName: rname,
+	}
+
+	b, _ := json.Marshal(js)
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", uri, bytes.NewReader(b))
+	req.Header.Add("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Add("User-Agent", common.UserAgent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return -1, err
+	}
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	jc, _ := rrconfig.LoadJsonConfigFromBytes(body)
+	// {
+	// 	"BaseResponse":{
+	// 	   "Ret":0,
+	// 	   "ErrMsg":""
+	// 	}
+	// }
+	ret, _ := jc.GetInt("BaseResponse.Ret")
+	return ret, nil
+}

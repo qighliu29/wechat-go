@@ -106,6 +106,13 @@ type InitReqBody struct {
 	Topic              string
 }
 
+type OplogReqBody struct {
+	BaseRequest *BaseRequest
+	UserName    string
+	CmdId       int
+	RemarkName  string
+}
+
 // RevokeReqBody: revoke message api http request body
 type RevokeReqBody struct {
 	BaseRequest *BaseRequest
