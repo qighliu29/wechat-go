@@ -517,11 +517,11 @@ func (s *Session) SetRemarkName(uname, rname string) error {
 	}
 	// set RemarkName in local, for now bot will update its contact auto
 	// so disable this set
-	usr := s.Cm.GetContactByUserName(uname)
-	if usr == nil {
-		return fmt.Errorf("WebWxOplog ok, set RemarkName in memory failed")
-	}
-	usr.RemarkName = rname
+	// usr := s.Cm.GetContactByUserName(uname)
+	// if usr == nil {
+	// 	return fmt.Errorf("WebWxOplog ok, set RemarkName in memory failed")
+	// }
+	// usr.RemarkName = rname
 	return nil
 }
 
