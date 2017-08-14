@@ -277,6 +277,8 @@ loop1:
 				if err != nil {
 					logs.Error(err)
 				}
+			} else if sel == 4 {
+				WebWxSync(s.WxWebCommon, s.WxWebXcg, s.Cookies, nil, s.SynKeyList)
 			} else if sel != 0 && sel != 7 {
 				errChan <- fmt.Errorf("session down, sel %d", sel)
 				break loop1
@@ -304,8 +306,33 @@ func (s *Session) consumer(msg []byte) {
 		return
 	}
 	msgis, _ := jc.GetInterfaceSlice("AddMsgList")
+	mctts, _ := jc.GetInterfaceSlice("ModContactList")
 	for _, v := range msgis {
 		rmsg := s.analize(v.(map[string]interface{}))
+
+		// handle friend confirmation message
+		if rmsg.MsgType == MSG_SYS && strings.HasSuffix(rmsg.Content, "现在可以开始聊天了。") {
+			nu := new(User)
+			nu.UserName = rmsg.FromUserName
+			// following fields need get from "ModContactList"
+			var mctt map[string]interface{} = nil
+			for _, v := range mctts {
+				mv, _ := v.(map[string]interface{})
+				if uf, ok := mv["UserName"]; ok {
+					if uname, ok := uf.(string); ok && uname == rmsg.FromUserName {
+						mctt = mv
+						break
+					}
+				}
+			}
+			if mctt != nil {
+				nu.NickName = mctt["NickName"].(string)
+				nu.Sex = int(mctt["Sex"].(float64))
+				s.Cm.AddUser(nu)
+			}
+			continue
+		}
+
 		err, handles := s.HandlerRegister.Get(rmsg.MsgType)
 		if err != nil {
 			logs.Warn(err)
@@ -494,15 +521,22 @@ func (s *Session) AcceptFriend(verifyContent string, vul []*VerifyUser) error {
 
 func (s *Session) updateCm() {
 	for {
-		<-time.Tick(time.Duration(5) * time.Second)
+		<-time.Tick(time.Duration(60) * time.Second)
 		if s.Status == SESS_ERROR || s.Status == SESS_EXIT {
 			break
 		}
 		cb, err := WebWxGetContact(s.WxWebCommon, s.WxWebXcg, s.Cookies)
 		if err == nil {
-			s.Cm, err = CreateContactManagerFromBytes(cb)
-			// for v2
-			s.Cm.AddUser(s.Bot)
+			cm, err := CreateContactManagerFromBytes(cb)
+			if err != nil {
+				logs.Error("WebWxGetContact() too often!")
+			} else {
+				s.Cm = cm
+				// for v2
+				s.Cm.AddUser(s.Bot)
+			}
+		} else {
+			logs.Error("WebWxGetContact(): %s", err.Error())
 		}
 	}
 }

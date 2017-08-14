@@ -281,7 +281,9 @@ func WebWxSync(common *Common,
 		return fmt.Errorf("BaseResponse.Ret %d", retcode)
 	}
 
-	msg <- body
+	if msg != nil {
+		msg <- body
+	}
 
 	skl.List = skl.List[:0]
 	skl1, _ := GetSyncKeyListFromJc(jc)
