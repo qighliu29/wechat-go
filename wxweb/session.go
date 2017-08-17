@@ -271,7 +271,7 @@ loop1:
 		}
 		if ret == 0 {
 			// check success
-			if sel == 2 || sel == 6 {
+			if sel == 2 || sel == 3 || sel == 6 {
 				// new message
 				err := WebWxSync(s.WxWebCommon, s.WxWebXcg, s.Cookies, msg, s.SynKeyList)
 				if err != nil {
